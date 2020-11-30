@@ -81,26 +81,34 @@ def get_transitional_probabilities(input: str, sub_boundary: str)->Dict[str, flo
     return transitional_probabilities
 
 
-dev_input = "bPih1PgPSWdPrPah1PmPSWbPih1PgPSWdPrPah1PmPSWU"
-dev_no_word_boundaries = remove_boundaries(dev_input, "W")
-
-transitional_probabilities = get_transitional_probabilities(dev_no_word_boundaries, "S")
-print(transitional_probabilities)
-utterances = [utterance for utterance in dev_no_word_boundaries.split("U") if len(utterance) > 0]
-actual = [utterance for utterance in dev_input.split("U") if len(utterance) > 0]
-print(utterances)
-for utterance in utterances:
-    print(predict_word_boundaries(utterance, "S", "W", transitional_probabilities))
-for utterance in actual:
-    print(utterance)
-
-
-
-
-
-# input : str = ""
-# for line in open("mother.speech.txt"):
-#     input += line.strip()
+# dev_input = "bPih1PgPSWdPrPah1PmPSWbPih1PgPSWdPrPah1PmPSWU"
+# dev_no_word_boundaries = remove_boundaries(dev_input, "W")
 #
-# print(input[1:20])
-# print(remove_boundaries(input, 'W')[1:20])
+# transitional_probabilities = get_transitional_probabilities(dev_no_word_boundaries, "S")
+# print(transitional_probabilities)
+# utterances = [utterance for utterance in dev_no_word_boundaries.split("U") if len(utterance) > 0]
+# actual = [utterance for utterance in dev_input.split("U") if len(utterance) > 0]
+# print(utterances)
+# for utterance in utterances:
+#     print(predict_word_boundaries(utterance, "S", "W", transitional_probabilities))
+# for utterance in actual:
+#     print(utterance)
+
+
+
+def main():
+    input : str = ""
+    for line in open("mother.speech.txt"):
+        input += line.strip()
+    input_without_word_boundaries = remove_boundaries(input, "W")
+    transitional_probabilities = get_transitional_probabilities(input_without_word_boundaries, "S")
+    #print(transitional_probabilities)
+    correct_utterances = [utterance for utterance in input.split("U") if len(utterance) > 0]
+    utterances_no_boundares = [utterance for utterance in input_without_word_boundaries.split("U") if len(utterance) > 0]
+    i : int = 0
+    while (i < len(correct_utterances)):
+        print(correct_utterances[i], predict_word_boundaries(utterances_no_boundares[i], "S", "W", transitional_probabilities))
+        i += 1
+        
+if __name__ == "__main__" :
+    main()
