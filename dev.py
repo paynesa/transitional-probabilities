@@ -2,7 +2,7 @@ from typing import Dict, List
 
 
 def remove_boundaries(input: str, delim: str) -> str:
-    """Returns a new string with the given boundaries removed"""
+    """Returns a new string with the given boundary removed"""
     output = ""
     for char in input:
         if char != delim:
@@ -16,14 +16,15 @@ def predict_word_boundaries(
     boundary_to_insert: str,
     transitional_probabilities: Dict[str, float],
 ):
-    """Given the transitional probabilities of syllables and the input string, predicts word boundaries"""
+    """Given the transitional probabilities of syllables and the input string, predicts word boundaries
+    for an utterance and returns a new string containing these boundaries"""
     curr_probability = 0
     last_probability = 0
     output_string = ""
     curr_syl: str = ""
     last_syl: str = ""
     for char in input:
-        # If we've reached a boundary, update our counts
+        # if we've reached a boundary, update our counts
         if char == sub_boundary:
             if last_syl and curr_syl:
                 lookup = last_syl + " " + curr_syl
@@ -40,7 +41,7 @@ def predict_word_boundaries(
                 output_string += last_syl + sub_boundary
             last_syl = curr_syl
             curr_syl = ""
-        # Otherwise, append to the current syllable
+        # otherwise, append to the current syllable
         else:
             curr_syl += char
     if last_syl:
@@ -53,34 +54,33 @@ def get_transitional_probabilities(input: str, sub_boundary: str) -> Dict[str, f
     separated by spaces, mapped to the transitional probabilities of the two syllables"""
     total_frequency: Dict[str, int] = {}
     transitional_frequency: Dict[str, int] = {}
-    # iterate through each utterance separately
+    # iterate through each utterance separately to get the overall frequency and transitional frequencies
     utterances: List[str] = [utt for utt in input.split("U") if len(utt) > 0]
     for utterance in utterances:
-        curr_syl = ""
-        last_syl = ""
-        for char in utterance:
-            if char == sub_boundary:
-                # update the total counts
-                if curr_syl not in total_frequency:
-                    total_frequency[curr_syl] = 0
-                total_frequency[curr_syl] += 1
-                # only update the transitional frequency if we're not at a boundary
-                if curr_syl and last_syl:
-                    transitional: str = last_syl + " " + curr_syl
-                    if transitional not in transitional_frequency:
-                        transitional_frequency[transitional] = 0
-                    transitional_frequency[transitional] += 1
-                last_syl = curr_syl
-                curr_syl = ""
-            else:
-                curr_syl += char
-    transitional_probabilities: Dict[str, float] = {}
-    for transition in transitional_frequency:
-        # get the transitional frequency of B following A
-        p_AB = transitional_frequency[transition]
-        # get the total frequency of A and set the transitional probability accordingly
-        p_A = total_frequency[transition.split()[0]]
-        transitional_probabilities[transition] = p_AB / p_A
+        # iterate through each syllable in the utterance
+        syllables: List[str] = [
+            syll for syll in utterance.split(sub_boundary) if len(syll) > 0
+        ]
+        last_syl: str = ""
+        for curr_syl in syllables:
+            # update the frequency of the given syllable
+            if curr_syl not in total_frequency:
+                total_frequency[curr_syl] = 0
+            total_frequency[curr_syl] += 1
+            # if not word initial, update the transitional probabilities
+            if curr_syl and last_syl:
+                transitional: str = last_syl + " " + curr_syl
+                if transitional not in transitional_frequency:
+                    transitional_frequency[transitional] = 0
+                transitional_frequency[transitional] += 1
+            # keep track of the last seen syllable for transitions
+            last_syl = curr_syl
+    # now, calculate the transitional probabilities based off of the frequencies
+    transitional_probabilities: Dict[str, float] = {
+        transition: transitional_frequency[transition]
+        / total_frequency[transitional.split()[0]]
+        for transition in transitional_frequency
+    }
     return transitional_probabilities
 
 
@@ -92,7 +92,6 @@ def main():
     transitional_probabilities = get_transitional_probabilities(
         input_without_word_boundaries, "S"
     )
-    # print(transitional_probabilities)
     correct_utterances = [
         utterance for utterance in input.split("U") if len(utterance) > 0
     ]
@@ -102,7 +101,6 @@ def main():
         if len(utterance) > 0
     ]
     i: int = 0
-    total = 0
     recall = 0
     precision = 0
     while i < len(correct_utterances):
@@ -113,13 +111,11 @@ def main():
         correct_words = [word for word in correct.split("W") if len(word) > 0]
         hypothesized_words = [word for word in hypothesized.split("W") if len(word) > 0]
         num_correct = len([word for word in hypothesized_words if word in correct])
-        # print(num_correct/len(correct_words), num_correct/len(hypothesized_words))
         recall += num_correct / len(correct_words)
         precision += num_correct / len(hypothesized_words)
-        total += 1
         i += 1
-    print(recall / total)
-    print(precision / total)
+    print(recall / i)
+    print(precision / i)
 
 
 if __name__ == "__main__":
