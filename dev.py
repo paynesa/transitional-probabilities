@@ -106,9 +106,19 @@ def main():
     correct_utterances = [utterance for utterance in input.split("U") if len(utterance) > 0]
     utterances_no_boundares = [utterance for utterance in input_without_word_boundaries.split("U") if len(utterance) > 0]
     i : int = 0
+    total = 0
+    precision = 0
     while (i < len(correct_utterances)):
-        print(correct_utterances[i], predict_word_boundaries(utterances_no_boundares[i], "S", "W", transitional_probabilities))
+        correct = correct_utterances[i]
+        hypothesized = predict_word_boundaries(utterances_no_boundares[i], "S", "W", transitional_probabilities)
+        correct_words = [word for word in correct.split("W") if len(word) > 0]
+        hypothesized_words = [word for word in hypothesized.split("W") if len(word) > 0]
+        num_correct = len([word for word in hypothesized_words if word in correct])
+        #print(num_correct/len(correct_words), num_correct/len(hypothesized_words))
+        precision += num_correct/len(correct_words)
+        total += 1
         i += 1
-        
+    print(precision/total)
+
 if __name__ == "__main__" :
     main()
