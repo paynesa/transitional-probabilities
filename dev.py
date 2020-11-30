@@ -107,6 +107,7 @@ def main():
     utterances_no_boundares = [utterance for utterance in input_without_word_boundaries.split("U") if len(utterance) > 0]
     i : int = 0
     total = 0
+    recall = 0
     precision = 0
     while (i < len(correct_utterances)):
         correct = correct_utterances[i]
@@ -115,9 +116,11 @@ def main():
         hypothesized_words = [word for word in hypothesized.split("W") if len(word) > 0]
         num_correct = len([word for word in hypothesized_words if word in correct])
         #print(num_correct/len(correct_words), num_correct/len(hypothesized_words))
-        precision += num_correct/len(correct_words)
+        recall += num_correct/len(correct_words)
+        precision += num_correct/len(hypothesized_words)
         total += 1
         i += 1
+    print(recall/total)
     print(precision/total)
 
 if __name__ == "__main__" :
