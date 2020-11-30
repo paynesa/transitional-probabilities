@@ -8,6 +8,38 @@ def remove_boundaries(input : str, delim : str)->str:
             output += char
     return output
 
+def predict_word_boundaries(input : str, sub_boundary: str, boundary_to_insert: str, transitional_probabilities : Dict[str, float]):
+    """Given the transitional probabilities of syllables and the input string, predicts word boundaries"""
+    curr_probability = 0
+    last_probability = 0
+    output_string = ""
+    curr_syl : str = ""
+    last_syl : str = ""
+    for char in input:
+        # If we've reached a boundary, update our counts
+        if char == sub_boundary:
+            if last_syl and curr_syl:
+                lookup = last_syl + " " + curr_syl
+                new_probability = transitional_probabilities[lookup]
+                if (curr_probability < last_probability) and (curr_probability < new_probability):
+                    output_string += boundary_to_insert
+                last_probability = curr_probability
+                curr_probability = new_probability
+
+            # update the current and last syllables
+            if last_syl:
+                output_string += last_syl+sub_boundary
+            last_syl = curr_syl
+            curr_syl = ""
+        # Otherwise, append to the current syllable
+        else:
+            curr_syl += char
+    if last_syl:
+        output_string += last_syl + sub_boundary + boundary_to_insert
+    return output_string
+
+
+
 def get_transitional_probabilities(input: str, sub_boundary: str)->Dict[str, float]:
     """Gets the transitional probabilities from the input and returns a dictionary of syllables
     separated by spaces, mapped to the transitional probabilities of the two syllables"""
@@ -51,9 +83,16 @@ def get_transitional_probabilities(input: str, sub_boundary: str)->Dict[str, flo
 
 dev_input = "bPih1PgPSWdPrPah1PmPSWbPih1PgPSWdPrPah1PmPSWU"
 dev_no_word_boundaries = remove_boundaries(dev_input, "W")
-print(dev_input)
-print(dev_no_word_boundaries)
-get_transitional_probabilities(dev_no_word_boundaries, "S")
+
+transitional_probabilities = get_transitional_probabilities(dev_no_word_boundaries, "S")
+print(transitional_probabilities)
+utterances = [utterance for utterance in dev_no_word_boundaries.split("U") if len(utterance) > 0]
+actual = [utterance for utterance in dev_input.split("U") if len(utterance) > 0]
+print(utterances)
+for utterance in utterances:
+    print(predict_word_boundaries(utterance, "S", "W", transitional_probabilities))
+for utterance in actual:
+    print(utterance)
 
 
 
