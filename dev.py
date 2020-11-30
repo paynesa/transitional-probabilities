@@ -20,6 +20,7 @@ def predict_word_boundaries(
     for an utterance and returns a new string containing these boundaries"""
     last_syl = ""
     last_prob = 0
+    # TODO: things change if I make this one
     curr_prob = 0
     output = ""
     # iterate through the syllables of the word
@@ -70,8 +71,10 @@ def get_transitional_probabilities(input: str, sub_boundary: str) -> Dict[str, f
             last_syl = curr_syl
     # now, calculate the transitional probabilities based off of the frequencies
     transitional_probabilities: Dict[str, float] = {
-        transition: (transitional_frequency[transition]
-        / total_frequency[transition.split(" ")[0]])
+        transition: (
+            transitional_frequency[transition]
+            / total_frequency[transition.split(" ")[0]]
+        )
         for transition in transitional_frequency
     }
     return transitional_probabilities
@@ -80,15 +83,14 @@ def get_transitional_probabilities(input: str, sub_boundary: str) -> Dict[str, f
 def main():
     """Executes the statistical learning with transitional probabilities and generation"""
     # get the input, both with and without word boundaries
-    input: str = "bigSWUdrumSWUcarSWdrumSWUbigSWcarSWbigSWcarSWU"
-    # for line in open("mother.speech.txt"):
-    #     input += line.strip()
+    input: str = ""  # "bigSWUdrumSWUcarSWdrumSWUbigSWcarSWbigSWcarSWU"
+    for line in open("mother.speech.txt"):
+        input += line.strip()
     input_without_word_boundaries = remove_boundaries(input, "W")
     # calculate the transitional probabilites of words from the transitions between syllables
     transitional_probabilities = get_transitional_probabilities(
         input_without_word_boundaries, "S"
     )
-    print(transitional_probabilities)
     # get the correct utterances and the utterances to generate from
     correct_utterances = [utt for utt in input.split("U") if len(utt) > 0]
     utterances_no_boundares = [
@@ -107,13 +109,12 @@ def main():
             word for word in correct_utterances[i].split("W") if len(word) > 0
         ]
         hypothesized_words = [word for word in hypothesized.split("W") if len(word) > 0]
-        print(correct_words, hypothesized_words)
         num_correct = len(
             [word for word in hypothesized_words if word in correct_words]
         )
         recall += num_correct / len(correct_words)
         # TODO: what's going on here?
-        precision += num_correct  / len(hypothesized_words)
+        precision += num_correct / len(hypothesized_words)
         i += 1
     print(recall / i)
     print(precision / i)
