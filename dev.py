@@ -18,35 +18,28 @@ def predict_word_boundaries(
 ):
     """Given the transitional probabilities of syllables and the input string, predicts word boundaries
     for an utterance and returns a new string containing these boundaries"""
-    curr_probability = 0
-    last_probability = 0
-    output_string = ""
-    curr_syl: str = ""
-    last_syl: str = ""
-    for char in input:
-        # if we've reached a boundary, update our counts
-        if char == sub_boundary:
-            if last_syl and curr_syl:
-                lookup = last_syl + " " + curr_syl
-                new_probability = transitional_probabilities[lookup]
-                if (curr_probability < last_probability) and (
-                    curr_probability < new_probability
-                ):
-                    output_string += boundary_to_insert
-                last_probability = curr_probability
-                curr_probability = new_probability
-
-            # update the current and last syllables
-            if last_syl:
-                output_string += last_syl + sub_boundary
-            last_syl = curr_syl
-            curr_syl = ""
-        # otherwise, append to the current syllable
-        else:
-            curr_syl += char
+    last_syl = ""
+    last_prob = 0
+    curr_prob = 0
+    output = ""
+    # iterate through the syllables of the word
+    syllables: List[str] = [syll for syll in input.split(sub_boundary) if len(syll) > 0]
+    for curr_syl in syllables:
+        # if this isn't the first syllable, find and update the transitional probabilities
+        if last_syl:
+            new_probability = transitional_probabilities[last_syl + " " + curr_syl]
+            # local minimum; add the boundary before we append the last syllable
+            if (curr_prob < last_prob) and (curr_prob < new_probability):
+                output += boundary_to_insert
+            # update and keep track of the probabilities so we can check for mins
+            last_prob = curr_prob
+            curr_prob = new_probability
+            # add the last syllable to the output; we've added a transition before it already if we need to
+            output += last_syl + sub_boundary
+        last_syl = curr_syl
     if last_syl:
-        output_string += last_syl + sub_boundary + boundary_to_insert
-    return output_string
+        output += last_syl + sub_boundary + boundary_to_insert
+    return output
 
 
 def get_transitional_probabilities(input: str, sub_boundary: str) -> Dict[str, float]:
@@ -85,34 +78,40 @@ def get_transitional_probabilities(input: str, sub_boundary: str) -> Dict[str, f
 
 
 def main():
+    """Executes the statistical learning with transitional probabilities and generation"""
+    # get the input, both with and without word boundaries
     input: str = ""
     for line in open("mother.speech.txt"):
         input += line.strip()
     input_without_word_boundaries = remove_boundaries(input, "W")
+    # calculate the transitional probabilites of words from the transitions between syllables
     transitional_probabilities = get_transitional_probabilities(
         input_without_word_boundaries, "S"
     )
-    correct_utterances = [
-        utterance for utterance in input.split("U") if len(utterance) > 0
-    ]
+    # get the correct utterances and the utterances to generate from
+    correct_utterances = [utt for utt in input.split("U") if len(utt) > 0]
     utterances_no_boundares = [
-        utterance
-        for utterance in input_without_word_boundaries.split("U")
-        if len(utterance) > 0
+        utt for utt in input_without_word_boundaries.split("U") if len(utt) > 0
     ]
     i: int = 0
     recall = 0
     precision = 0
+    # iterate through the utterances and generate for each using the transitional probabilities
     while i < len(correct_utterances):
-        correct = correct_utterances[i]
-        hypothesized = predict_word_boundaries(
+        hypothesized: str = predict_word_boundaries(
             utterances_no_boundares[i], "S", "W", transitional_probabilities
         )
-        correct_words = [word for word in correct.split("W") if len(word) > 0]
+        # get the correct and hypothesized words and tally up the precision and recall
+        correct_words = [
+            word for word in correct_utterances[i].split("W") if len(word) > 0
+        ]
         hypothesized_words = [word for word in hypothesized.split("W") if len(word) > 0]
-        num_correct = len([word for word in hypothesized_words if word in correct])
+        num_correct = len(
+            [word for word in hypothesized_words if word in correct_words]
+        )
         recall += num_correct / len(correct_words)
-        precision += num_correct / len(hypothesized_words)
+        # TODO: what's going on here?
+        precision += num_correct  # / len(hypothesized_words)
         i += 1
     print(recall / i)
     print(precision / i)
