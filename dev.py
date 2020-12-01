@@ -18,28 +18,19 @@ def predict_word_boundaries(
 ):
     """Given the transitional probabilities of syllables and the input string, predicts word boundaries
     for an utterance and returns a new string containing these boundaries"""
-    last_syl = ""
-    last_prob = 0
-    # TODO: things change if I make this one
-    curr_prob = 0
-    output = ""
-    # iterate through the syllables of the word
-    syllables: List[str] = [syll for syll in input.split(sub_boundary) if len(syll) > 0]
-    for curr_syl in syllables:
-        # if this isn't the first syllable, find and update the transitional probabilities
-        if last_syl:
-            new_probability = transitional_probabilities[last_syl + " " + curr_syl]
-            # local minimum; add the boundary before we append the last syllable
-            if (curr_prob < last_prob) and (curr_prob < new_probability):
-                output += boundary_to_insert
-            # update and keep track of the probabilities so we can check for mins
-            last_prob = curr_prob
-            curr_prob = new_probability
-            # add the last syllable to the output; we've added a transition before it already if we need to
-            output += last_syl + sub_boundary
-        last_syl = curr_syl
-    if last_syl:
-        output += last_syl + sub_boundary + boundary_to_insert
+    syllables: List[str] = [s for s in input.split(sub_boundary) if s]
+    tps: List[float] = [
+        transitional_probabilities[syllables[i] + "_" + syllables[i + 1]]
+        for i in range(0, len(syllables) - 1)
+    ]
+    output = syllables[0] + "S"
+    for i in range(0, len(tps)):
+        if (i == 0 or tps[i - 1] > tps[i]) and (
+            i == len(tps) - 1 or tps[i] < tps[i + 1]
+        ):
+            output += "W"
+        output += syllables[i + 1] + "S"
+    output += "W"
     return output
 
 
@@ -49,48 +40,50 @@ def get_transitional_probabilities(input: str, sub_boundary: str) -> Dict[str, f
     total_frequency: Dict[str, int] = {}
     transitional_frequency: Dict[str, int] = {}
     # iterate through each utterance separately to get the overall frequency and transitional frequencies
-    utterances: List[str] = [utt for utt in input.split("U") if len(utt) > 0]
-    for utterance in utterances:
+    for utterance in [utt for utt in input.split("U") if len(utt) > 0]:
         # iterate through each syllable in the utterance
-        syllables: List[str] = [
-            syll for syll in utterance.split(sub_boundary) if len(syll) > 0
-        ]
-        last_syl: str = ""
-        for curr_syl in syllables:
+        syllables: List[str] = [syll for syll in utterance.split(sub_boundary) if syll]
+        i: int = 0
+        while i < len(syllables):
+            curr_syl = syllables[i]
             # update the frequency of the given syllable
             if curr_syl not in total_frequency:
                 total_frequency[curr_syl] = 0
             total_frequency[curr_syl] += 1
             # if not word initial, update the transitional probabilities
-            if curr_syl and last_syl:
-                transitional: str = last_syl + " " + curr_syl
+            if i > 0:
+                transitional: str = syllables[i - 1] + "_" + curr_syl
                 if transitional not in transitional_frequency:
                     transitional_frequency[transitional] = 0
                 transitional_frequency[transitional] += 1
-            # keep track of the last seen syllable for transitions
-            last_syl = curr_syl
+            i += 1
     # now, calculate the transitional probabilities based off of the frequencies
-    transitional_probabilities: Dict[str, float] = {
+    return {
         transition: (
             transitional_frequency[transition]
-            / total_frequency[transition.split(" ")[0]]
+            / total_frequency[transition.split("_")[0]]
         )
         for transition in transitional_frequency
     }
-    return transitional_probabilities
 
 
 def main():
     """Executes the statistical learning with transitional probabilities and generation"""
     # get the input, both with and without word boundaries
-    input: str = ""  # "bigSWUdrumSWUcarSWdrumSWUbigSWcarSWbigSWcarSWU"
+    input: str = ""
     for line in open("mother.speech.txt"):
         input += line.strip()
+    input2 = ""
+    for char in input:
+        if char != "0" and char != "1" and char != "2":
+            input2 += char
+    input = input2
     input_without_word_boundaries = remove_boundaries(input, "W")
     # calculate the transitional probabilites of words from the transitions between syllables
     transitional_probabilities = get_transitional_probabilities(
         input_without_word_boundaries, "S"
     )
+    print(transitional_probabilities)
     # get the correct utterances and the utterances to generate from
     correct_utterances = [utt for utt in input.split("U") if len(utt) > 0]
     utterances_no_boundares = [
