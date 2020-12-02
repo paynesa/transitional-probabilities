@@ -26,13 +26,13 @@ def predict_word_boundaries(
         for i in range(0, len(syllables) - 1)
     ]
     # initialize the output and iterate through the tps to check for local minima
-    output = syllables[0] + "S"
+    output = syllables[0] + sub_boundary
     for i in range(0, len(tps)):
         # add word boundary at local minimum, provided you're not at either end of the word
         if i > 0 and i < len(tps) - 1 and tps[i - 1] > tps[i] and tps[i] < tps[i + 1]:
-            output += "W"
-        output += syllables[i + 1] + "S"
-    output += "W"
+            output += boundary_to_insert
+        output += syllables[i + 1] + sub_boundary
+    output += boundary_to_insert
     return output
 
 
