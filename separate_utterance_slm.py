@@ -1,13 +1,6 @@
 from typing import Dict, List
-
-
-def remove_boundaries(input: str, delim: str) -> str:
-    """Returns a new string with the given boundary removed"""
-    output = ""
-    for char in input:
-        if char != delim:
-            output += char
-    return output
+from run_slm import remove_boundaries
+import argparse
 
 
 def predict_word_boundaries(
@@ -23,17 +16,14 @@ def predict_word_boundaries(
         transitional_probabilities[syllables[i] + "_" + syllables[i + 1]]
         for i in range(0, len(syllables) - 1)
     ]
-    output = syllables[0] + "S"
+    output = syllables[0] + sub_boundary
     for i in range(0, len(tps)):
-        if (i > 0 and tps[i - 1] > tps[i]) and (
-            i < len(tps) - 1 and tps[i] < tps[i + 1]
+        if (i == 0 or tps[i - 1] > tps[i]) and (
+            i == len(tps) - 1 or tps[i] < tps[i + 1]
         ):
-            output += "W"
-        output += syllables[i + 1] + "S"
-    output += "W"
-    print(syllables)
-    print(tps)
-    print(output)
+            output += boundary_to_insert
+        output += syllables[i + 1] + sub_boundary
+    output += boundary_to_insert
     return output
 
 
@@ -43,7 +33,7 @@ def get_transitional_probabilities(input: str, sub_boundary: str) -> Dict[str, f
     total_frequency: Dict[str, int] = {}
     transitional_frequency: Dict[str, int] = {}
     # iterate through each utterance separately to get the overall frequency and transitional frequencies
-    for utterance in [input]:  # [utt for utt in input.split("U") if utt]:
+    for utterance in [utt for utt in input.split("U") if utt]:
         # iterate through each syllable in the utterance
         syllables: List[str] = [syll for syll in utterance.split(sub_boundary) if syll]
         i: int = 0
@@ -70,40 +60,26 @@ def get_transitional_probabilities(input: str, sub_boundary: str) -> Dict[str, f
     }
 
 
-def main():
-    """Executes the statistical learning with transitional probabilities and generation"""
+def main(path: str, boundary: str, keep_accents: bool):
+    """Executes the statistical learning with transitional probabilities and generation,
+    handling each utterance entirely separately"""
+    print(f"Running the modified SLM model in {path}...")
+    sub_boundary = "S" if boundary == "W" else "P"
     # get the input, both with and without word boundaries
-    input: str = ""  # "bPih1PgPSWdPrPah1PmPSWbPih1PgPSWdPrPah1PmPSWUbPih1PgPSWdPrPah1PmPSWU"
-    for line in open("mother.speech.txt"):
+    input: str = ""
+    for line in open(path):
         input += line.strip()
-    input2 = ""
-    for char in input:
-        if char != "0" and char != "1" and char != "2":
-            input2 += char
-    input = input2
-    input_without_word_boundaries = remove_boundaries(input, "W")
+    if not keep_accents:
+        input2 = ""
+        for char in input:
+            if char != "0" and char != "1" and char != "2":
+                input2 += char
+        input = input2
+    input_without_word_boundaries = remove_boundaries(input, boundary)
     # calculate the transitional probabilites of words from the transitions between syllables
     transitional_probabilities = get_transitional_probabilities(
-        input_without_word_boundaries, "S"
+        input_without_word_boundaries, sub_boundary
     )
-    generated = predict_word_boundaries(
-        input_without_word_boundaries, "S", "W", transitional_probabilities
-    )
-    test_correct = [utt for utt in input.split("U") if utt]
-    test_generated = [utt for utt in generated.split("U") if utt]
-    total_correct = 0
-    total_generated = 0
-    total_right = 0
-
-    for i in range(0, len(test_correct)):
-        correct = [w for w in test_correct[i].split("W") if w]
-        generated = [w for w in test_generated[i].split("W") if w]
-        total_right += len([w for w in generated if w in correct])
-        total_correct += len(correct)
-        total_generated += len(generated)
-    print(total_right / total_generated)
-    print(total_right / total_correct)
-    return
 
     # get the correct utterances and the utterances to generate from
     correct_utterances = [utt for utt in input.split("U") if utt]
@@ -111,35 +87,55 @@ def main():
         utt for utt in input_without_word_boundaries.split("U") if utt
     ]
     i: int = 0
-    recall = 0
-    precision = 0
-    total_precision_numerator = 0
-    total_precision_denominator = 0
-    total_recall_denominator = 0
+    total_correct = 0
+    total_generated = 0
+    total_right = 0
+    print(f"Generating on {len(correct_utterances)} predictions...")
     # iterate through the utterances and generate for each using the transitional probabilities
     while i < len(correct_utterances):
         hypothesized: str = predict_word_boundaries(
-            utterances_no_boundaries[i], "S", "W", transitional_probabilities
+            utterances_no_boundaries[i],
+            sub_boundary,
+            boundary,
+            transitional_probabilities,
         )
         # get the correct and hypothesized words and tally up the precision and recall
-        correct_words = [word for word in correct_utterances[i].split("W") if word]
-        hypothesized_words = [word for word in hypothesized.split("W") if word]
+        correct_words = [word for word in correct_utterances[i].split(boundary) if word]
+        hypothesized_words = [word for word in hypothesized.split(boundary) if word]
         num_correct = len(
             [word for word in correct_words if word in hypothesized_words]
         )
-        print(len(correct_words), num_correct, len(hypothesized_words))
-        recall += num_correct / len(correct_words)
-        # TODO: what's going on here?
-        precision += num_correct / len(hypothesized_words)
-        total_precision_denominator += len(hypothesized_words)
-        total_precision_numerator += num_correct
-        total_recall_denominator += len(correct_words)
+        total_correct += len(correct_words)
+        total_generated += len(hypothesized_words)
+        total_right += num_correct
         i += 1
-    print(recall / i)
-    print(precision / i)
-    print(total_precision_numerator / total_precision_denominator)
-    print(total_precision_numerator / total_recall_denominator)
+    precision: float = total_right / total_generated
+    recall: float = total_right / total_correct
+    print("===============================================================")
+    print(f"Precision: {precision * 100 : .3f}%")
+    print(f"Recall: {recall * 100: .3f}%")
+    print(f"F-score: {(2*precision*recall)/(precision+recall)*100: .3f}%")
 
 
 if __name__ == "__main__":
-    main()
+    # Parse the user input and call main with the parameters to execute the program
+    argument_parser = argparse.ArgumentParser()
+    argument_parser.add_argument(
+        "path", type=str, help="path of the file to perform SLM learning on"
+    )
+    argument_parser.add_argument(
+        "-boundary",
+        type=str,
+        choices=["W", "S"],
+        default="W",
+        help="boundary of interest (default=W)",
+    )
+    argument_parser.add_argument(
+        "-keep_accents",
+        type=bool,
+        default=False,
+        choices=[True, False],
+        help="keep accents when calculating TPs (default=F)",
+    )
+    args = argument_parser.parse_args()
+    main(args.path, args.boundary, args.keep_accents)

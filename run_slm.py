@@ -107,9 +107,12 @@ def main(path: str, boundary: str, keep_accents: bool):
         total_right += len([w for w in correct if w in generated])
         total_correct += len(correct)
         total_generated += len(generated)
-    print("=================================================================")
-    print(f"Precision: {total_right / total_generated*100 : .3f}%")
-    print(f"Recall: {total_right / total_correct*100: .3f}%")
+    precision: float = total_right / total_generated
+    recall: float = total_right / total_correct
+    print("===============================================================")
+    print(f"Precision: {precision * 100 : .3f}%")
+    print(f"Recall: {recall * 100: .3f}%")
+    print(f"F-score: {(2 * precision * recall) / (precision + recall) * 100: .3f}%")
 
 
 if __name__ == "__main__":
