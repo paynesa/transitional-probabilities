@@ -19,16 +19,17 @@ def predict_word_boundaries(
 ):
     """Given the transitional probabilities of syllables and the input string, predicts word boundaries
     for an utterance and returns a new string containing these boundaries"""
+    # extract the syllables from the utterance to generate from and extract the corresponding transitional probabilities
     syllables: List[str] = [s for s in input.split(sub_boundary) if s]
     tps: List[float] = [
         transitional_probabilities[syllables[i] + "_" + syllables[i + 1]]
         for i in range(0, len(syllables) - 1)
     ]
+    # initialize the output and iterate through the tps to check for local minima
     output = syllables[0] + "S"
     for i in range(0, len(tps)):
-        if (i > 0 and tps[i - 1] > tps[i]) and (
-            i < len(tps) - 1 and tps[i] < tps[i + 1]
-        ):
+        # add word boundary at local minimum, provided you're not at either end of the word
+        if i > 0 and i < len(tps) - 1 and tps[i - 1] > tps[i] and tps[i] < tps[i + 1]:
             output += "W"
         output += syllables[i + 1] + "S"
     output += "W"
@@ -69,9 +70,10 @@ def get_transitional_probabilities(input: str, sub_boundary: str) -> Dict[str, f
 def main():
     """Executes the statistical learning with transitional probabilities and generation"""
     # get the input, both with and without word boundaries
-    input: str = ""  # "bPih1PgPSWdPrPah1PmPSWbPih1PgPSWdPrPah1PmPSWUbPih1PgPSWdPrPah1PmPSWU"
+    input: str = ""
     for line in open("mother.speech.txt"):
         input += line.strip()
+    # TODO: parameterize to handle this
     input2 = ""
     for char in input:
         if char != "0" and char != "1" and char != "2":
@@ -82,9 +84,11 @@ def main():
     transitional_probabilities = get_transitional_probabilities(
         input_without_word_boundaries, "S"
     )
+    # generate over the entire input using these transitional probabilities
     generated = predict_word_boundaries(
         input_without_word_boundaries, "S", "W", transitional_probabilities
     )
+    # evaluate utterance by utterance and average the precision and recall
     test_correct = [utt for utt in input.split("U") if utt]
     test_generated = [utt for utt in generated.split("U") if utt]
     total_correct = 0
@@ -96,9 +100,8 @@ def main():
         total_right += len([w for w in correct if w in generated])
         total_correct += len(correct)
         total_generated += len(generated)
-    print(total_right / total_generated)
-    print(total_right / total_correct)
-    return
+    print(f"Precision: {total_right / total_generated*100 : .3f}%")
+    print(f"Recall: {total_right / total_correct*100: .3f}%")
 
 
 if __name__ == "__main__":
