@@ -67,8 +67,9 @@ def get_transitional_probabilities(input: str, sub_boundary: str) -> Dict[str, f
     }
 
 
-def main(path: str, boundary: str, keep_accents:bool):
+def main(path: str, boundary: str, keep_accents: bool):
     """Executes the statistical learning with transitional probabilities and generation"""
+    print(f"Calculating transitional probabilities over {path}...")
     sub_boundary: str = "S" if boundary == "W" else "P"
     # get the input, both with and without word boundaries
     input: str = ""
@@ -88,11 +89,15 @@ def main(path: str, boundary: str, keep_accents:bool):
     )
     # generate over the entire input using these transitional probabilities
     generated = predict_word_boundaries(
-        input_without_word_boundaries, sub_boundary, boundary, transitional_probabilities
+        input_without_word_boundaries,
+        sub_boundary,
+        boundary,
+        transitional_probabilities,
     )
     # evaluate utterance by utterance and average the precision and recall
     test_correct = [utt for utt in input.split("U") if utt]
     test_generated = [utt for utt in generated.split("U") if utt]
+    print(f"Evaluating {len(test_correct)} predictions ...")
     total_correct = 0
     total_generated = 0
     total_right = 0
@@ -102,6 +107,7 @@ def main(path: str, boundary: str, keep_accents:bool):
         total_right += len([w for w in correct if w in generated])
         total_correct += len(correct)
         total_generated += len(generated)
+    print("=================================================================")
     print(f"Precision: {total_right / total_generated*100 : .3f}%")
     print(f"Recall: {total_right / total_correct*100: .3f}%")
 
@@ -124,7 +130,7 @@ if __name__ == "__main__":
         type=bool,
         default=False,
         choices=[True, False],
-        help="keep accents when calculating TPs (default=F)"
+        help="keep accents when calculating TPs (default=F)",
     )
     args = argument_parser.parse_args()
     main(args.path, args.boundary, args.keep_accents)
