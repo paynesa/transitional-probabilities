@@ -67,26 +67,28 @@ def get_transitional_probabilities(input: str, sub_boundary: str) -> Dict[str, f
     }
 
 
-def main():
+def main(path: str, boundary: str, keep_accents:bool):
     """Executes the statistical learning with transitional probabilities and generation"""
+    sub_boundary: str = "S" if boundary == "W" else "P"
     # get the input, both with and without word boundaries
     input: str = ""
-    for line in open("mother.speech.txt"):
+    for line in open(path):
         input += line.strip()
-    # TODO: parameterize to handle this
-    input2 = ""
-    for char in input:
-        if char != "0" and char != "1" and char != "2":
-            input2 += char
-    input = input2
-    input_without_word_boundaries = remove_boundaries(input, "W")
+    # remove accents from the input
+    if not keep_accents:
+        input2 = ""
+        for char in input:
+            if char != "0" and char != "1" and char != "2":
+                input2 += char
+        input = input2
+    input_without_word_boundaries = remove_boundaries(input, boundary)
     # calculate the transitional probabilites of words from the transitions between syllables
     transitional_probabilities = get_transitional_probabilities(
-        input_without_word_boundaries, "S"
+        input_without_word_boundaries, sub_boundary
     )
     # generate over the entire input using these transitional probabilities
     generated = predict_word_boundaries(
-        input_without_word_boundaries, "S", "W", transitional_probabilities
+        input_without_word_boundaries, sub_boundary, boundary, transitional_probabilities
     )
     # evaluate utterance by utterance and average the precision and recall
     test_correct = [utt for utt in input.split("U") if utt]
@@ -95,8 +97,8 @@ def main():
     total_generated = 0
     total_right = 0
     for i in range(0, len(test_correct)):
-        correct = [w for w in test_correct[i].split("W") if w]
-        generated = [w for w in test_generated[i].split("W") if w]
+        correct = [w for w in test_correct[i].split(boundary) if w]
+        generated = [w for w in test_generated[i].split(boundary) if w]
         total_right += len([w for w in correct if w in generated])
         total_correct += len(correct)
         total_generated += len(generated)
@@ -105,4 +107,24 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # Parse the user input and call main with the parameters to execute the program
+    argument_parser = argparse.ArgumentParser()
+    argument_parser.add_argument(
+        "path", type=str, help="path of the file to perform SLM learning on"
+    )
+    argument_parser.add_argument(
+        "-boundary",
+        type=str,
+        choices=["W", "S"],
+        default="W",
+        help="boundary of interest (default=W)",
+    )
+    argument_parser.add_argument(
+        "-keep_accents",
+        type=bool,
+        default=False,
+        choices=[True, False],
+        help="keep accents when calculating TPs (default=F)"
+    )
+    args = argument_parser.parse_args()
+    main(args.path, args.boundary, args.keep_accents)
