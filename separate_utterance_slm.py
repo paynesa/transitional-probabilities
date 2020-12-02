@@ -1,3 +1,7 @@
+"""Runs a modified version of the learner specified in
+https://www.ling.upenn.edu/~ycharles/papers/quick.pdf that predicts
+separately on each utterance"""
+
 from typing import Dict, List
 from run_slm import remove_boundaries
 import argparse

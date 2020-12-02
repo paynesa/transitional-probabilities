@@ -1,3 +1,6 @@
+"""Runs the statistical learning model based on transitional probabilities as
+specified in https://www.ling.upenn.edu/~ycharles/papers/quick.pdf"""
+
 from typing import Dict, List
 import argparse
 
