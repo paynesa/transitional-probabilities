@@ -5,9 +5,9 @@ This code provides two slightly different implementations of statistical learnin
 probabilities as originally proposed by <a href="https://pzacad.pitzer.edu/~dmoore/1996_Saffran,%20Aslin,%20Newport_Stat'l%20Learning%20at%208%20mos_Science.pdf"> Saffran, Aslin, and Newport (1996) </a> 
 and modelled computationally by <a href="https://www.ling.upenn.edu/~ycharles/papers/quick.pdf">Yang and Gambell (2005) </a>. 
 
-The transitional probabilities of two syllables `AB` is given by: `TP(AB) = freq(AB)/freq(A)`. Both models 
+The transitional probability of two syllables `AB` is given by: `TP(AB) = freq(AB)/freq(A)`. Both models 
 provided here calculate these probabilities and then apply them to the input data in an attempt to segment it into 
-words. Precision, recall, and f-score are then reported by comparing the input data to the learner's proposed segmentation
+words at local minima in the TP. Precision, recall, and f-score are then reported by comparing the input data to the learner's proposed segmentation
 on a per-utterance basis. I provide both the SLM as modelled by Yang and Gambell, and a slightly modified version wherein 
 prediction of word boundaries is carried out separately for each utterance. 
 
@@ -30,4 +30,6 @@ optional arguments:
   -keep_accents         keep accents when calculating TPs (default=ignore accents)
 ```
 Finally, `mother.speech.txt` provides the annotated CHILDES data used by Yang and Gambell (2005) and provided
-courtesy of Charles Yang. To replicate Yang and Gambell (2005), run `python3 run_slm.py mother.speech.txt`. 
+courtesy of Charles Yang. 
+
+To replicate Yang and Gambell (2005), run `python3 run_slm.py mother.speech.txt`. 
