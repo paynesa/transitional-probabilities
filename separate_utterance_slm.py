@@ -73,6 +73,9 @@ def main(path: str, boundary: str, keep_accents: bool):
     input: str = ""
     for line in open(path):
         input += line.strip()
+    # if we're finding syllable boundaries, we don't care about word boundaries
+    if boundary == "S":
+        input = remove_boundaries(input, "W")
     if not keep_accents:
         input2 = ""
         for char in input:
